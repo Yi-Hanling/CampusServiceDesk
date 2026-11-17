@@ -1,0 +1,12 @@
+spring:
+  profiles:
+    active: dev
+
+  # 👇 注意：servlet 要和 profiles 左侧对齐！
+  servlet:
+    multipart:
+      max-file-size: 10MB      # 单个文件最大 10MB
+      max-request-size: 20MB   # 一次请求最大 20MB
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml

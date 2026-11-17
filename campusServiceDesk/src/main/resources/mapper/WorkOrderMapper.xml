@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace 必须和你的 Mapper 接口全路径一致 -->
+<mapper namespace="com.campus.servicedesk.mapper.WorkOrderMapper">
+
+    <!-- 条件查询总数 -->
+    <select id="countByCondition" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM work_order
+        <where>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND title LIKE '%' + #{keyword} + '%'
+            </if>
+        </where>
+    </select>
+
+    <!-- 条件分页查询数据 -->
+    <select id="selectPage" resultType="com.campus.servicedesk.entity.WorkOrder">
+        SELECT * FROM work_order
+        <where>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND title LIKE '%' + #{keyword} + '%'
+            </if>
+        </where>
+        ORDER BY create_time DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+</mapper>

@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: campus-service-desk
+
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+
+  # 新增的数据库连接配置
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=CampusServiceDesk;encrypt=true;trustServerCertificate=true;loginTimeout=30;
+    username: sa
+    password: 123456
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+
+file:
+  upload-dir: D:\学习\大三上\web\web大作业\图片

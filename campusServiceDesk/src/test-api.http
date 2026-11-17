@@ -1,0 +1,42 @@
+### 测试图片上传
+POST http://localhost:8080/api/orders/7/uploadImage
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjMsInVzZXJuYW1lIjoic3R1ZGVudDEiLCJyb2xlIjowLCJpYXQiOjE3OTQ4MTg4MDIsImV4cCI6MTc5NDkwNTIwMn0.c9fT3TYzgRB-91OWEEmByTTDwocMHkRRJNGr__Aykb8
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.jpg"
+Content-Type: image/jpeg
+
+< C:\Users\17295\Pictures\Screenshots\屏幕截图 2026-02-05 215056.png
+--WebAppBoundary--
+
+### 1. 学生登录 (student1)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "student1",
+  "password": "123456"
+}
+
+### 2. 管理员登录 (admin01)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin01",
+  "password": "123456"
+}
+
+### 3. 维修工登录 (worker01)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "worker01",
+  "password": "123456"
+}
+
+
+
+
