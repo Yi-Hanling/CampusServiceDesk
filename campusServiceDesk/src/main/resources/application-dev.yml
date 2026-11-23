@@ -21,4 +21,4 @@ mybatis:
     map-underscore-to-camel-case: true
 
 file:
-  upload-dir: D:\学习\大三上\web\web大作业\图片
+  upload-dir: D:/学习/大三上/web/web大作业/图片/

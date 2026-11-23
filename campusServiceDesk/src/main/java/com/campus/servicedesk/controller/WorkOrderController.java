@@ -204,14 +204,21 @@ public class WorkOrderController {
             String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
             String newFileName = UUID.randomUUID().toString() + suffix;
 
-            // 3. 保存文件到本地磁盘
-            File destFile = new File(uploadDir + newFileName);
-            if (!destFile.getParentFile().exists()) {
-                destFile.getParentFile().mkdirs(); // 如果没有目录则自动创建
+            // 👇 3. 核心修复：使用 File 对象，它会自动处理路径斜杠问题
+            File destDir = new File(uploadDir);
+            if (!destDir.exists()) {
+                destDir.mkdirs(); // 如果没有目录则自动创建
             }
+
+            // 把父目录和文件名分开传，这是最安全的做法
+            File destFile = new File(destDir, newFileName);
+
+            // 打印一下真实保存的路径，方便你在 IDEA 控制台排错
+            System.out.println("图片真实保存路径: " + destFile.getAbsolutePath());
+
             file.transferTo(destFile);
 
-            // 4. 将相对路径存入数据库
+            // 4. 将相对路径存入数据库（数据库中存的是 /uploads/xxx.png）
             String imageUrl = "/uploads/" + newFileName;
             workOrderMapper.insertImage(id, imageUrl);
 

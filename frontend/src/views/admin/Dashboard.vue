@@ -55,18 +55,27 @@
         <el-table-column prop="id" label="编号" width="80" />
         <el-table-column prop="title" label="标题" />
         <el-table-column prop="creatorId" label="提交人ID" width="100" />
-        <el-table-column prop="createTime" label="提交时间" width="180" />
+        <el-table-column label="提交时间" width="160">
+          <template #default="{ row }">
+            <div v-if="row.createTime" style="line-height: 1.5; font-size: 13px;">
+              <div>{{ row.createTime.split('T')[0] }}</div>
+              <div style="color: #909399;">{{ row.createTime.split('T')[1]?.substring(0, 8) }}</div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
             <el-tag :type="statusMap[row.status]?.type">{{ statusMap[row.status]?.label }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
+        <!-- 操作列宽度调整，去掉了单独的看图按钮 -->
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
+            <el-button link type="primary" @click="showDetail(row)">详情</el-button>
             <el-button link type="info" @click="showLogs(row.id)">日志</el-button>
 
             <template v-if="row.status === 0">
-              <el-button link type="primary" @click="openAssign(row.id)">分配</el-button>
+              <el-button link type="success" @click="openAssign(row.id)">分配</el-button>
               <el-button link type="danger" @click="handleReject(row.id)">驳回</el-button>
             </template>
 
@@ -108,21 +117,67 @@
     <el-dialog v-model="logVisible" title="流转日志" width="500px">
       <el-timeline>
         <el-timeline-item v-for="log in logData" :key="log.id" :timestamp="log.createTime">
-          {{ log.remark }} (状态: {{ log.oldStatus ?? '无' }} -> {{ log.newStatus }})
+          <p>
+            {{ log.remark }}
+            (状态: {{ log.oldStatus !== null ? statusMap[log.oldStatus]?.label : '无' }}
+            -> {{ statusMap[log.newStatus]?.label }})
+          </p>
         </el-timeline-item>
       </el-timeline>
     </el-dialog>
-  </div>
 
+    <!-- 工单详情弹窗 -->
+    <el-dialog v-model="detailVisible" title="工单详细信息" width="600px">
+      <el-descriptions border :column="2" v-if="currentDetail" label-width="90px">
+        <el-descriptions-item label="工单编号">{{ currentDetail.id }}</el-descriptions-item>
+        <el-descriptions-item label="提交时间">
+          <span v-if="currentDetail.createTime">
+            {{ currentDetail.createTime.split('T')[0] }}
+            {{ currentDetail.createTime.split('T')[1]?.substring(0, 8) }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item label="工单标题" :span="2">{{ currentDetail.title }}</el-descriptions-item>
+        <el-descriptions-item label="当前状态" :span="2">
+          <el-tag :type="statusMap[currentDetail.status]?.type">
+            {{ statusMap[currentDetail.status]?.label }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="问题描述" :span="2">
+          <div style="white-space: pre-wrap; word-break: break-all; line-height: 1.6; max-height: 200px; overflow-y: auto;">
+            {{ currentDetail.content || '无描述' }}
+          </div>
+        </el-descriptions-item>
+
+        <!-- 👇 新增：故障图片展示 -->
+        <el-descriptions-item label="故障图片" :span="2">
+          <div v-if="detailImageList.length === 0" style="color: #999;">暂无图片</div>
+          <div v-else style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <el-image
+                v-for="(url, index) in detailImageList"
+                :key="index"
+                :src="url"
+                :preview-src-list="detailImageList"
+                style="width: 100px; height: 100px; border-radius: 6px; border: 1px solid #eee;"
+                fit="cover"
+            />
+          </div>
+        </el-descriptions-item>
+
+      </el-descriptions>
+      <template #footer>
+        <el-button type="primary" @click="detailVisible = false">关 闭</el-button>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getPageOrders, assignOrder, rejectOrder, getStatistics, getOrderLogs } from '@/api/orders'
+import { getPageOrders, assignOrder, rejectOrder, getStatistics, getOrderLogs, getOrderImages } from '@/api/orders'
 import { getWorkers } from '@/api/auth'
 import { statusMap } from '@/utils/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getOrderImages } from '@/api/orders'
+
 // 统计数据
 const stats = reactive({ total: 0, pending: 0, processing: 0, completed: 0 })
 
@@ -142,6 +197,11 @@ const currentOrderId = ref(null)
 const logVisible = ref(false)
 const logData = ref([])
 
+// 详情弹窗相关
+const detailVisible = ref(false)
+const currentDetail = ref(null)
+const detailImageList = ref([]) // 详情里的图片列表
+
 const fetchData = async () => {
   loading.value = true
   try {
@@ -155,7 +215,6 @@ const fetchData = async () => {
 
 const fetchStats = async () => {
   const res = await getStatistics()
-  // 解析后端视图返回的数据
   const data = res.data
   stats.total = data.reduce((sum, item) => sum + item.orderCount, 0)
   stats.pending = data.find(i => i.status === 0)?.orderCount || 0
@@ -197,18 +256,24 @@ const showLogs = async (id) => {
   logVisible.value = true
 }
 
+// 👇 修改：显示工单详情时，同时拉取图片
+const showDetail = async (row) => {
+  currentDetail.value = row
+  detailImageList.value = []
+  detailVisible.value = true
+
+  try {
+    const res = await getOrderImages(row.id)
+    if (res.data && res.data.length > 0) {
+      detailImageList.value = res.data.map(url => 'http://localhost:8080' + url)
+    }
+  } catch (error) {
+    console.error("获取详情图片失败", error)
+  }
+}
+
 onMounted(() => {
   fetchData()
   fetchStats()
 })
-
-const imageVisible = ref(false)
-const imageList = ref([])
-
-const showImages = async (id) => {
-  const res = await getOrderImages(id)
-  if (res.data.length === 0) return ElMessage.info('该工单暂无图片')
-  imageList.value = res.data.map(url => 'http://localhost:8080' + url)
-  imageVisible.value = true
-}
 </script>
